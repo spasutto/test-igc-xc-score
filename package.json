@@ -1,0 +1,18 @@
+{
+  "name": "igcscore",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "build": "cp src/index.html dist && webpack"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "igc-xc-score": "^1.6.0"
+  },
+  "devDependencies": {
+    "webpack": "^5.70.0",
+    "webpack-cli": "^4.9.2"
+  }
+}

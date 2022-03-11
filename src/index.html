@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Getting Started</title>
+  </head>
+  <body>
+   <script src="main.js"></script>
+   <script>
+    function getscore() {
+      let score = IGCScore.score(document.getElementById('igccont').value);
+      console.log(score);
+      alert(score.score + ' pts');
+    }
+    window.onload = function () {
+      document.getElementById('butscore').style.display = 'block';
+    };
+  </script>
+  <button id="butscore" onclick="getscore();">score</button>
+  <textarea id="igccont"></textarea>
+  </body>
+</html>
