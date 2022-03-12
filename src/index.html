@@ -6,9 +6,8 @@
   </head>
   <body>
     <script src="igc-xc-score.js"></script>
-    IGC :<BR>
-    <textarea id="igccont"></textarea><BR>
-    <button id="butscore" onclick="getScore();" style="display:none;">score</button>
+    <label for="file-selector">Sélectionnez un fichier IGC : </label>
+    <input type="file" id="file-selector" accept=".igc">
     <div id="scoreresult"></div>
     <script>
       function displayScore(score) {
@@ -40,23 +39,25 @@
         scoreresult.innerHTML = '<table class="table"><tr>' + r.join('</tr><tr>');
       }
 
-      function getScore() {
-        let igccont = document.getElementById('igccont').value;
-        try {
-          scoreresult.innerHTML = "scoring start...";
-          IGCScore.score(igccont, (score) => {
-            if (score && typeof score.value == 'object') {
-              score = score.value;
-            }
-            displayScore(score);
-          });
-        } catch(e) {
-          scoreresult.innerHTML = e;
-        }
-      }
-      window.onload = function () {
-        document.getElementById('butscore').style.display = 'block';
-      };
+      const fileSelector = document.getElementById('file-selector');
+      fileSelector.addEventListener('change', (event) => {
+        const fileList = event.target.files;
+        const reader = new FileReader();
+        reader.addEventListener('load', (event) => {
+          try {
+            scoreresult.innerHTML = "scoring start...";
+            IGCScore.score(reader.result, (score) => {
+              if (score && typeof score.value == 'object') {
+                score = score.value;
+              }
+              displayScore(score);
+            });
+          } catch(e) {
+            scoreresult.innerHTML = e;
+          }
+        });
+        reader.readAsText(fileList[0]);
+      });
       var scoreresult = document.getElementById('scoreresult');
     </script>
   </body>

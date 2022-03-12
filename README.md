@@ -19,7 +19,7 @@ window.onload = function () {
 npm install
 npm run build
 ```
-Then open dist/index.html in webserver, paste the content of an IGC in the textarea and click on "score"
+Then open dist/index.html in webserver, select an IGC file to "score"
 
 ## Return data
 igc-xc-score return (minus opt.flight) :
