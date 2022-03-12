@@ -2,7 +2,7 @@
 Minimal code snippet for running [igc-xc-score](https://github.com/mmomtchev/igc-xc-score/) inside webpage
 
 ```html
-<script src="main.js"></script>
+<script src="igc-xc-score.js"></script>
 <script>
 window.onload = function () {
   IGCScore.score(igccontent, (score) => {

@@ -2,7 +2,7 @@ module.exports = {
   entry: './src/index.js',
   output: {
     //path: '/dist',
-    filename: 'main.js',
+    filename: 'igc-xc-score.js',
     libraryTarget: 'var',
     library: 'IGCScore'
   }
