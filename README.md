@@ -19,7 +19,9 @@ window.onload = function () {
 npm install
 npm run build
 ```
-Then open dist/index.html in webserver, select an IGC file to "score"
+Then open `dist/index.html` in webserver, select an IGC file to "score".
+
+Alternatively `score.html` is a map point&click score tool
 
 ## Return data
 igc-xc-score return (minus opt.flight) :

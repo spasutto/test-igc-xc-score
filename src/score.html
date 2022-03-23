@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+  <title>Calcul score de vol</title>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+  <script src="igc-xc-score.js"></script>
+
+<style>
+  body {
+  padding: 0;
+  margin: 0;
+  }
+  html, body {
+  height: 100%;
+  width: 100%;
+  }
+  h3 {
+    margin:0px;
+  }
+  #map {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  }
+  #zonescore {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width:120px;
+  overflow: hidden;
+  background-color:white;
+  padding:1px;
+  opacity:80%;
+  border-radius: 0 0 0 5px;
+  }
+</style>
+
+<script>
+function ConvertDDToDM(D, lng) {
+  return {
+  dir: D < 0 ? (lng ? "W" : "S") : lng ? "E" : "N",
+  deg: 0 | (D < 0 ? (D = -D) : D),
+  min: 0 | (((D += 1e-9) % 1) * 60),
+  mindec: Math.round(1000 * (((D % 1) * 60) % 1)),
+  };
+}
+function displayFlightScore() {
+  if (typeof flightscore.scoreInfo != 'object' || flightscore.scoreInfo.distance < 10) {
+    return;
+  }
+  zonescore.style.display = 'initial';
+  scoreres.innerHTML = flightscore.opt.scoring.name+"<BR>"+flightscore.score+" pts<BR>"+flightscore.scoreInfo.distance+" km";
+  if (scorelinepath) {
+    map.removeLayer(scorelinepath);
+  }
+  if (scorepointlist) {
+    for (let i=0; i<scorepointlist.length; i++){
+      map.removeLayer(scorepointlist[i]);
+    }
+    scorepointlist = [];
+  }
+  if (Array.isArray(flightscore.scoreInfo.tp)) {
+    let tps = flightscore.scoreInfo.tp;
+    let pointList = [];
+    for (let i=0; i<tps.length; i++) {
+      let markertp = L.marker([tps[i].y, tps[i].x], {icon: turnpointIcon});
+      markertp.addTo(map).bindPopup("TP#"+(i+1));
+      scorepointlist.push(markertp);
+    }
+    scorelinepath = new L.Polyline(scorepointlist.map(pt => pt.getLatLng()), {
+      color: 'red',
+      weight: 2,
+      opacity: 0.5,
+      smoothFactor: 1
+    });
+    scorelinepath.addTo(map);
+  }
+  if (flightscore.scoreInfo.cp) {
+    let tmpmarker = L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x], {icon: startIcon});
+    tmpmarker.addTo(map).bindPopup("départ");
+    scorepointlist.push(tmpmarker);
+    tmpmarker = L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x], {icon: finishIcon});
+    tmpmarker.addTo(map).bindPopup("arrivée");
+    scorepointlist.push(tmpmarker);
+  } else if (flightscore.scoreInfo.ep) {
+    let tmpmarker = L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x], {icon: startIcon});
+    tmpmarker.addTo(map).bindPopup("départ");
+    scorepointlist.push(tmpmarker);
+    tmpmarker = L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x], {icon: finishIcon});
+    tmpmarker.addTo(map).bindPopup("arrivée");
+    scorepointlist.push(tmpmarker);
+  }
+}
+function score() {
+  try {
+    if (pointlist.length <= 0) return;
+    let igccontent = "AXCT5bf3b63111939687\nHFDTEDATE:150919,01\n";
+    let t = 0;
+    let add_b_rec = function(t, lat, lng) {
+      let b_rec = "";
+      b_rec = "B";
+      b_rec += new Date(((10*3600)+t) * 1000).toISOString().substr(11, 8).replace(/:/g, '');
+      b_rec += String(lat.deg).padStart(2, '0');
+      b_rec += String(lat.min).padStart(2, '0');
+      b_rec += String(lat.mindec).padStart(3, '0');
+      b_rec += lat.dir;
+      b_rec += String(lng.deg).padStart(3, '0');
+      b_rec += String(lng.min).padStart(2, '0');
+      b_rec += String(lng.mindec).padStart(3, '0');
+      b_rec += lng.dir;
+      b_rec += "A000000160845";
+      return b_rec;
+    }
+    if (pointlist.length<5) {
+      // ajout de 5 points pour permettre à igc xc score de calculer
+      for (let i=0; i<=5-pointlist.length; i++) {
+        let lat = ConvertDDToDM(pointlist[0].getLatLng().lat+Math.random()/10000, false),
+        lng = ConvertDDToDM(pointlist[0].getLatLng().lng+Math.random()/10000, true);
+        igccontent += add_b_rec(t+=10, lat, lng) + "\n";
+      }
+    }
+    for (let i=pointlist.length>=5?0:1; i<pointlist.length; i++) {
+      let lat = ConvertDDToDM(pointlist[i].getLatLng().lat, false),
+      lng = ConvertDDToDM(pointlist[i].getLatLng().lng, true);
+      igccontent += add_b_rec(t+=10, lat, lng) + "\n";
+    }
+    IGCScore.score(igccontent, (score) => {
+      if (score && typeof score.value == 'object') {
+        score = score.value;
+      }
+      if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
+      window.flightscore = score;
+      displayFlightScore();
+    });
+  } catch(e) {console.log(e);}
+}
+function removePoint(marker) {
+  map.removeLayer(marker);
+  for (let i=0; i<pointlist.length; i++) {
+    if (pointlist[i] == marker) {
+      pointlist.splice(i, 1);
+      break;
+    }
+  }
+  drawLines();
+  score();
+}
+function drawLines() {
+  if (linepath) {
+    map.removeLayer(linepath);
+  }
+  linepath = new L.Polyline(pointlist.map(pt => pt.getLatLng()), {
+    color: 'blue',
+    weight: 2,
+    opacity: 0.5,
+    smoothFactor: 1
+  });
+  linepath.addTo(map);
+}
+window.addEventListener('DOMContentLoaded', ()=>{
+  window.scoreres = document.getElementById('scoreres');
+  window.zonescore = document.getElementById('zonescore');
+  window.pointlist = [];
+  window.scorepointlist = [];
+  window.linepath = null;
+  window.scorelinepath = null;
+  window.map = L.map('map');
+  var opentopomap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  maxZoom: 17,
+  attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+  }).addTo(map);
+  map.setView([45.2, 5.7], 12);
+
+  map.on('click', function(e) {
+    //alert("Lat, Lon : " + e.latlng.lat + ", " + e.latlng.lng);
+    let marker = L.marker([e.latlng.lat, e.latlng.lng], {draggable:'true'});
+    marker.on('contextmenu', function(e) {removePoint(e.sourceTarget);});
+    marker.on('mouseup', function(e) {clearTimeout(window.pressTimer);});
+    marker.on('mousedown', function(e) {window.pressTimer = window.setTimeout(function() { if (dragging) return;removePoint(e.sourceTarget);},1000);});
+    marker.on('dragstart', function(e) {window.dragging = true;});
+    marker.on('dragend', function(e) {window.dragging = false;drawLines();score();});
+    pointlist.push(marker);
+    marker.addTo(map);
+    drawLines();
+    score();
+  });
+  var LeafIcon = L.Icon.extend({
+  options: {
+    iconSize:   [15, 25], // point of the icon which will correspond to marker's location
+    iconAnchor:   [8, 25], // point of the icon which will correspond to marker's location
+    popupAnchor:  [1,-20] // point from which the popup should open relative to the iconAnchor
+  }
+  });
+  window.startIcon = new LeafIcon({ iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAApCAMAAAD3TXL8AAADAFBMVEX///+92pWRv06CtjiKu0GNvUePv0u52JCGuD2TxEyazFCj1Vqm11+k1FyczlKTxky/2Zqbw2Ce0Vag01Sd0lCb0UuZ0Eig0FiYw1yEtTyTxEue01KY0EiY0EeGtUKYy1Ch1ViZ0UmX0EWEtT+kyHKPvkqg1FiVz0WVz0SQwUufxWqEskCf01eX0UiUz0Kf1VWEs0B/rz2Wyk6b006Tz0GMvEiAsDt7rDWKukec0FSc01GCsECSzz+Y0kp+rTusyoG0z42Z0kyLuEaRzj2d01SEskGBrj6ixHOMwESQzjyRxUqKtFCTuV6OwUeDsEeUykuT0EOOzjqW0kmKvUOtyYW50ZeHuEN8qT2Rz0CNzTm1zZCFtEOX0kp+qj6XumSMzTeStl6dvW6IvEKU0UW4z5WFtkGV0UeLzTaWz0x5pTh3pDeUzUuFt0G6z5h9qj+KzDR2ojd4pTp9qz9ynDKVz0qLzTiIzDOJzTWOxkVxnDGCqklynjOLw0NxnjOOslyFuz6Q0ECHzDGHzDKO0D6Ry0eP0ECGvT93pTmU0kiGzDCJzjaMzzt3pDh3oDyKw0CMzjmFyy56okCyyZKR0UKEyyyS0UR8rDxymzSKx0CCyyuIxT6uxo2ByimCyit6qjuHxDyHzjSAyihznji1ypV5qjp/yiZ4pzmFwjqFzTJ+yiV2njmLzzx8ySOBvzeEzjF7ySJ4oTyKzzp8yiN6ySCAvTWDzC95yB91oziIzjh4yR17pER9uzKAzCx2yBuBzC19pUVzoTaFzjV0yBmAp0l7uDF/zCp6tzGDzDNynTWEqk+AyDCJrVZwoC9sly4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBAAAAAAAAAABRzXhRzXgAAZAAAAAAAAAAAAAAAAAAAAEAAABRzZxRzZwAAWwAAABRzaxRzawAACQAAAAAAAAAAAAAAAAAAAAAADQAABNBfMAAAAAAAABRzeBRzeAAAFgAAAAAAAAAAAAAAAAAAAAAAABeeXwRAAAAAXRSTlMAQObYZgAAAAlwSFlzAAALEgAACxIB0t1+/AAAAi1JREFUeNpjYCAIGJmYWVhZmNnY0SU4OLm4eXh4ePn4OQSQxQVZhbiFRUTFREWEucVZJRASklK80jKyUCDNyykJk5CTV1BUQgBFBS5liISKqpq6Bgioy0BpNU0tsIy2jq4eECjqK+go6CuCmLo6BiAJQyNjEyAwFjI1MzezsLQCc4wMgTLW+jZAYCtvZw/kONgZOYK4+tZAjpOxs7OziYsr1Dlu0npAvrETA4O7h66np6eSlzdUxscXxNf1cGfw8w8IDAwMCg6ByoSG2QL5Af5+DOH+EZGRkUFhUTDfRccA+RH+sQxxHgHx8fEBHglQicSkZDA/jiElNS09PT0wIxMqk5XtDOSn5eQyMOTF5ANBgEcBWKIwOBnEjSkCsotLSsvKysrTKgorq6oLaoLKgbzSklqgTF19QyMQNDUHtdS0BLU2gTgNbXUgA9o7mjrBoKu7C8Jq6ugBG93b1z8BFfT3TQTLTDKcPAUFTJg6DerQ6TO6ZiKDrlnToTKzp7XOQQJzW+dNggXI9PkLFiJA+fxF8BSyeEnzwqUwsLB5GVKqWrR8xUoYWLB8FXKCW7Z65RoIWLm6HSWJ9q5dtx4CVqzdgJp62zdu2gwCmzb2oKXriVu2bgOBrVsmoif57Ts279y5c/OO7Ri5ZNfuPXv37t23ez9mBjpwcOehnQcPYMlah48cPXT02GFsue7A8c3HT2CTYDh5bN2xk1hlGE6cwq6FgeH0mdM4ZBjOMhAFAFCC73+a/8WMAAAAAElFTkSuQmCC'});
+  window.finishIcon = new LeafIcon({ iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAApCAMAAAD3TXL8AAADAFBMVEX////alpa/T0+2OTm7QkK9SEi/TEzYkJC4Pj7ETU3MUFDVW1vXYGDUXV3OU1PGTU3DYWHRV1fTVVXSUVHRTEzQSUnQWVnDXV21PT3ETEzTU1PQSEi1Q0PLUVHVWVnRSkrQRka1QEDIc3O+S0vUWVnPRUXBTEzFa2uyQUHTWFjRSUnPQ0PVVlazQUGvPj7KT0/TT0/PQkK8SUmwPDysNja6SEjQVVXTUlKwQUHPQEDSS0utPDzKgoLPjo7STU24R0fOPj6yQkKuPz/EdHTARUXOPT3FS0u0UVG5X1/BSEiwSEjKTEzQRETOOzvSSkq9RETJhobRmJi4RESpPj7PQUHNOjrNkZG0RESqPj66ZWXNODi2X1+9b2+8Q0PRRkbPlpa2QkLRSEjNNzfPTU2lOTmkODjNTEy3QkLPmZmqQEDMNDSiODilOzurQECcMzPPS0vNOTnNNjbGRkacMjKqSkqeNDTDRESyXV27Pz/QQUHMMjLMMzPQPz/LSEi9Pz+lOjrSSUnMMDDONzfPPDykOTmgPT3DQUHOOjrLLy+iQUHJk5PRQ0PLLS3RRUWsPT2bNTXHQUHLLCzFPz/Gjo7KKirKLCyqPDzEPT3ONTXKKSmeOTnKlpaqOjrKJyenOjrCOzvNMzPKJiaeOjrPPT3JJCS/ODjOMjLJIyOhPT3POzvKJCTJISG9NjbIICCjOTnOOTnJHh6kRUW7MzPMLCzIHBzMLi6lRkahNzfONjbIGhqnSkq4MjLMKyu3MjKdNjaqUFDIMTGtV1egMDCXLy8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABRnAhRt0wAACQAAQAAAAAAAAAAAAAAAAAAAGgAABNBfMAAAAAAAABSSsBSSsAAAPQAEAAAAAAAAAAAAAAAAAAAAABRpXRSRWgAANAAAABSSvRSSvQAAFgAABAAAAAAAAAAAAAAAAAAAABSQpBSRgQAADQAAABRdmhRnAgAACQAAAAAAAC1YygHAAAAAXRSTlMAQObYZgAAAAlwSFlzAAALEgAACxIB0t1+/AAAAidJREFUeNpjYCAIGJmYWVhZmNnY0SU4OLm4eXh4ePn4OVDEBVgFuYWERURFhIW4xVjFERISkrxSotJQIMXLKQGTkJGVk1dAAHk5LkWIhJKyiioEiEJpFTV1sIyGppY2EMjryGnK6ciDmFqauiAJPX0DQyAwEDQyNjE2NTMHc/T1gDIWOpZAYCVrbQPk2Frr24G4OhZAjr2Bg4ODoZAj1DlOUtpAvoE9A4Ozi5arq6uCmztUxsMTxNdycWbw8vbx9fX18w+AygQGWQH5Pt5eDMHeIaGhoX5BYTDfhVsB+SHeEQyRLj5RUVE+LtFQiZjYODA/kiE+ITEpKck3OQUqk5rmAOQnpmcwMGRaZQGBj0s2WCLHPw7EtcoFsvPyC4DMwsSinOKS0uwyv0IgryC/FChTXlFZBQTVNX61ZbV+ldUgTmVdOciA+obqRjBoam6CsKobWsBGt7a1d6CC9rZOsEyXXncPCujo7YM6tH9C00Rk0DSpHyozua9yChKYWjmtCxYg/dNnzESAwumz4Clk9pyamXNhYGbNPKRUNWv+goUwMGP+IuQEN2/xwiUQsHBxPUpSbF26bDkELFi6AjX11q9ctRoEVq1sQUvXnWsa14JA45pO9CS/bv3qDRs2rF6/DiOXbNy0ecuWLVs3bcPMQNt3bNi5Ycd2LFlr1+49O/fs3YUt123PWp21D5sEw/69y/buxyrDsO8Adi0MDAcPHcQhw3CYgSgAAIO44YJQe27SAAAAAElFTkSuQmCC' });
+  window.turnpointIcon = new LeafIcon({ iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAApCAMAAADzuKLBAAADAFBMVEX6+vphYWE5OTlCQkJJSUkxMTFCREPxOyzsPC3yMyn0KyE4QkPxQDnxQTLtQTnqQzI+SED5QDr1QTXrSDnrMCHxSz3xOCTsPDRAQ0juSDTzW1T1W1vzYk//XVEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwUTlSAAAAAXRSTlMAQObYZgAAAAlwSFlzAAALEgAACxIB0t1+/AAAAL5JREFUeNrtk1sPgjAMhSdDx6QXHOIF9P//TbtycZjMB+OT8TyU5nyc0oXMmM+1KfLM2jwryzzb7pyrqsp779zc+f3EahAhAhEiacc85xogUFd8eUHqYZlZC0DAEG0G6dEkTAzQnIqMWeUYIbTjVDymLFqdFO44bpKeoQFGsXRBIobTKqebyz7yCDL1vJ4J+k2JYUDkJ7tI4Ap6SGgJOYFj7kXLLv2kYYj1Jk1/n9ibf/Rnv8ts/v4V9t3F/bIeU/AOEEoWrQAAAAAASUVORK5CYII=', iconAnchor: [3, 25], popupAnchor:  [5, -20] });
+  navigator.geolocation.getCurrentPosition(pos => {pos = pos.coords;map.setView([pos.latitude, pos.longitude], 12);});
+});
+</script>
+
+</head>
+<body>
+
+<div id="map"></div>
+<div id="zonescore">
+  <h3>Score</h3>
+  <div id="scoreres"></div>
+</div>
+
+
+</body>
+</html>

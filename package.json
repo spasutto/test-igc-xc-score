@@ -4,7 +4,7 @@
   "description": "",
   "private": true,
   "scripts": {
-    "build": "cp src/index.html dist && webpack"
+    "build": "cp src/index.html dist && cp src/score.html dist && webpack"
   },
   "author": "",
   "license": "ISC",
