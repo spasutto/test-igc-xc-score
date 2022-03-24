@@ -13,15 +13,17 @@ window.onload = function () {
 </script>
 ```
 
+## Try
+Just get a [release zip](https://github.com/spasutto/test-igc-xc-score/releases/) (e.g. [test-igc-xc-score_v1.0.zip](https://github.com/spasutto/test-igc-xc-score/releases/download/v1.0/test-igc-xc-score_v1.0.zip)) and open `index.html` in webserver, select an IGC file to "score".
+
+Alternatively `score.html` is a map point&click score tool
 
 ## Build
 ```
 npm install
 npm run build
 ```
-Then open `dist/index.html` in webserver, select an IGC file to "score".
-
-Alternatively `score.html` is a map point&click score tool
+Output files will be in `dist` folder
 
 ## Return data
 igc-xc-score return (minus opt.flight) :
