@@ -23,11 +23,16 @@
   width: 100%;
   }
   h3 {
-    margin:0px;
+    margin: 0;
+    text-align: center;
   }
   button {
     margin:0;
     padding:0;
+  }
+  select {
+    margin: 0 auto;
+    display: block;
   }
   #map {
   position: fixed;
@@ -99,26 +104,26 @@ function displayFlightScore() {
     return;
   }
   zonescore.style.display = 'initial';
-  scoreres.innerHTML = flightscore.opt.scoring.name+"<BR>"+flightscore.score+" pts<BR>"+flightscore.scoreInfo.distance+" km<HR>";
+  scoreres.innerHTML = "<b>"+flightscore.opt.scoring.name+"</b><BR>"+flightscore.score+" pts / "+flightscore.scoreInfo.distance+" km";
   let d = 0;
   for (let i=1; i<pointlist.length; i++) {
     d += haversineDistance(pointlist[i-1].getLatLng(), pointlist[i].getLatLng());
   }
-  scoreres.innerHTML += Math.round(d) +" km total<BR>"
-  scoreres.innerHTML += toReadableHour(d*360)+"&nbsp;@&nbsp;10km/h<BR>";
-  scoreres.innerHTML += toReadableHour(d*180)+"&nbsp;@&nbsp;20km/h<BR>";
-  scoreres.innerHTML += toReadableHour(d*144)+"&nbsp;@&nbsp;25km/h<BR>";
-  scoreres.innerHTML += toReadableHour(d*120)+"&nbsp;@&nbsp;30km/h<BR>";
-  scoreres.innerHTML += toReadableHour(d*90)+"&nbsp;@&nbsp;40km/h<BR>";
+  scoredist.innerHTML = Math.round(d) +" km total<BR>"
+  scoredist.innerHTML += toReadableHour(d*360)+"&nbsp;@&nbsp;10km/h<BR>";
+  scoredist.innerHTML += toReadableHour(d*180)+"&nbsp;@&nbsp;20km/h<BR>";
+  scoredist.innerHTML += toReadableHour(d*144)+"&nbsp;@&nbsp;25km/h<BR>";
+  scoredist.innerHTML += toReadableHour(d*120)+"&nbsp;@&nbsp;30km/h<BR>";
+  scoredist.innerHTML += toReadableHour(d*90)+"&nbsp;@&nbsp;40km/h<BR>";
   if (Array.isArray(flightscore.scoreInfo.tp)) {
     let tps = flightscore.scoreInfo.tp;
     if (flightscore.scoreInfo.cp) {
       let tmpmarker = L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x], {icon: startIcon});
-      tmpmarker.addTo(map).bindPopup("départ");
+      tmpmarker.addTo(map).bindPopup("start");
       scorepointlist.push(tmpmarker);
     } else if (flightscore.scoreInfo.ep) {
       let tmpmarker = L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x], {icon: startIcon});
-      tmpmarker.addTo(map).bindPopup("départ");
+      tmpmarker.addTo(map).bindPopup("start");
       scorepointlist.push(tmpmarker);
     }
     for (let i=0; i<tps.length; i++) {
@@ -128,11 +133,11 @@ function displayFlightScore() {
     }
     if (flightscore.scoreInfo.cp) {
       let tmpmarker = L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x], {icon: finishIcon});
-      tmpmarker.addTo(map).bindPopup("arrivée");
+      tmpmarker.addTo(map).bindPopup("finish");
       scorepointlist.push(tmpmarker);
     } else if (flightscore.scoreInfo.ep) {
       let tmpmarker = L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x], {icon: finishIcon});
-      tmpmarker.addTo(map).bindPopup("arrivée");
+      tmpmarker.addTo(map).bindPopup("finish");
       scorepointlist.push(tmpmarker);
     }
     scorelinepath = new L.Polyline(scorepointlist.map(pt => pt.getLatLng()), {
@@ -185,7 +190,7 @@ function score() {
       if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
       window.flightscore = score;
       displayFlightScore();
-    });
+    }, window.scoringrule);
   } catch(e) {console.log(e);}
 }
 function removePoint(marker) {
@@ -212,9 +217,14 @@ function splitPoint(marker) {
 }
 function addPoint(lat, lng, pos) {
   let marker = L.marker([lat, lng], {draggable:'true'});
-  marker.on('contextmenu', function(e) {removePoint(e.sourceTarget);e.originalEvent.preventDefault();});
-  marker.on('mouseup', function(e) {clearTimeout(window.pressTimer);});
-  marker.on('mousedown', function(e) {window.pressTimer = window.setTimeout(function() { if (dragging) return;removePoint(e.sourceTarget);},1000);});
+  marker.on('mouseup', function(e) {
+      if (e.originalEvent.which === 3) {
+        removePoint(e.sourceTarget);e.originalEvent.preventDefault();
+      } else {
+        clearTimeout(window.pressTimer);
+      }
+  });
+  marker.on('mousedown', function(e) {if (e.originalEvent.which !== 3) window.pressTimer = window.setTimeout(function() { if (window.dragging) return;removePoint(e.sourceTarget);},1000);});
   marker.on('dragstart', function(e) {window.dragging = true;});
   marker.on('dragend', function(e) {window.dragging = false;clearTimeout(window.pressTimer);drawLines();score();});
   if (typeof pos == 'number') {
@@ -248,6 +258,7 @@ function drawLines() {
     let p2 = map.project(pointlist[i].getLatLng());
     let newLatLng = map.unproject(p1._add(p2)._divideBy(2));
     let semimk = L.marker(newLatLng, {draggable:'true', icon: segmentIcon});
+    semimk.bindTooltip("split path");
     semimk.on('dragend', (e) => {splitPoint(e.target);});
     semimk.on('click', (e) => {splitPoint(e.sourceTarget);})
     semipointlist.push(semimk);
@@ -278,6 +289,7 @@ function clearPath() {
   pointlist = [];
 }
 window.addEventListener('DOMContentLoaded', ()=>{
+  window.scoringrule = 'FFVL';
   window.pointlist = [];
   window.semipointlist = [];
   window.scorepointlist = [];
@@ -300,6 +312,23 @@ window.addEventListener('DOMContentLoaded', ()=>{
       c = L.DomUtil.create('div');
       c.id = "scoreres";
       zonescore.appendChild(c);
+      c = L.DomUtil.create('div');
+      let d = L.DomUtil.create('select');
+      d.onchange = function() {window.scoringrule = this.value;score();};
+      let e = L.DomUtil.create('option');
+      e.value = 'FFVL';
+      e.innerText = 'FFVL';
+      d.appendChild(e);
+      e = L.DomUtil.create('option');
+      e.value = 'XContest';
+      e.innerText = 'XContest';
+      d.appendChild(e);
+      c.appendChild(d);
+      zonescore.appendChild(c);
+      zonescore.appendChild(L.DomUtil.create('HR'));
+      c = L.DomUtil.create('div');
+      c.id = "scoredist";
+      zonescore.appendChild(c);
 
       return zonescore;
     },
@@ -310,11 +339,12 @@ window.addEventListener('DOMContentLoaded', ()=>{
   };
   L.control.scoreres({ position: 'topright' }).addTo(map);
   window.scoreres = document.getElementById('scoreres');
+  window.scoredist = document.getElementById('scoredist');
   window.zonescore = document.getElementById('zonescore');
   L.Control.ClearPath = L.Control.extend({
     onAdd: function(map) {
       let btn = L.DomUtil.create('button');
-      btn.title = "reset trace";
+      btn.title = "reset track";
       let c = L.DomUtil.create('img');
       c.width=c.height="24";
       c.src = "data:image/png;base64,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";
@@ -333,6 +363,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if (e.originalEvent.srcElement != document.getElementById('map')) return;
     addPoint(e.latlng.lat, e.latlng.lng);
   });
+  map.on('contextmenu', function(e) {e.originalEvent.preventDefault();});
   var LeafIcon = L.Icon.extend({
   options: {
     iconSize:   [15, 25],
