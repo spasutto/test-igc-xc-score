@@ -5,7 +5,7 @@
   <title>Calcul score de vol</title>
 
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1.0, user-scalable=no" />
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
@@ -34,6 +34,9 @@
   margin: 0 auto;
   display: block;
   }
+  input:read-only {
+    background: #c7c7c7;
+  }
   #map {
   position: fixed;
   top: 0;
@@ -60,11 +63,15 @@
   top: 50%;
   left: 50%;
   background-color: white;
-  padding:2px;
+  padding:2px 12px;
   border: solid 1px gray;
   border-radius: 5px;
   transform: translate(-50%,-50%);
   -ms-transform: translate(-50%,-50%);
+  }
+  .pp_content button {
+    margin:5px 0px;
+    min-width:80px;
   }
   #zonescore {
   display: none;
@@ -292,6 +299,8 @@ function displayFlightScore() {
 }
 function score(onsuccess) {
   try {
+    scoreres.innerHTML = "scoring...";
+    scoredist.innerHTML = "";
     let tmpigccontent = null;
     if (typeof igccontent === 'string') {
         tmpigccontent = igccontent;
@@ -416,11 +425,11 @@ function drawLines() {
 }
 function clearPath() {
   zonescore.style.display = 'none';
+  igccontent = null;
   if (gpx_track) {
     map.removeLayer(gpx_track);
-    gpx_track = null;
-    igccontent = null;
   }
+  gpx_track = null;
   if (linepath) {
   map.removeLayer(linepath);
   }
@@ -497,6 +506,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   window.zoneurl = document.getElementById('zoneurl');
   window.permalink = document.getElementById('permalink');
   window.btpml = document.getElementById('btpml');
+  window.needclear = false;
   
   L.Control.ClearPath = L.Control.extend({
   onAdd: function(map) {
@@ -576,11 +586,13 @@ window.addEventListener('DOMContentLoaded', ()=>{
       clearPath();
       permalink.value=getPermalink();
       igccontent = reader.result;
+      window.needclear = true;
       score((score) => {
-      gpx_track = new L.Polyline(score.opt.flight.flightPoints.map(p => new L.LatLng(p.y, p.x)), opt_path);
-      gpx_track.addTo(map);
-      map.fitBounds(gpx_track.getBounds(), {padding: [35,35]});
-    });
+        gpx_track = new L.Polyline(score.opt.flight.flightPoints.map(p => new L.LatLng(p.y, p.x)), opt_path);
+        gpx_track.addTo(map);
+        map.fitBounds(gpx_track.getBounds(), {padding: [35,35]});
+        window.needclear = false;
+      });
     } catch(e) {
       console.log(e);
     }
@@ -602,6 +614,14 @@ window.addEventListener('DOMContentLoaded', ()=>{
   Array.prototype.forEach.call(document.getElementsByClassName('popup'), function(el) {
     el.addEventListener('click', function(e) {off(el, e)});
   });
+  addEventListener("error",function(e) {
+    if (typeof e === "object" && typeof e.message === "string") {
+      alert(e.message);
+      if (window.needclear) {
+        clearPath();
+      }
+    }
+  });
 });
 function off(elem, evt) {
   if (elem!=evt.target && elem.contains(evt.target)) return;
@@ -617,15 +637,15 @@ function off(elem, evt) {
   <div class="pp_content">
     <h3>Select an IGC file :</h3>
     <input type="file" id="file-selector" accept=".igc">
-    <button onclick="zoneigc.style.display = 'none';" style="float:right;margin:0px 10px;">close</button>
+    <button onclick="zoneigc.style.display = 'none';">close</button>
   </div>
 </div>
 <div id="zoneurl" class="popup">
   <div class="pp_content">
     <h3>Permalink :</h3>
-    <input type="text" id="permalink" onfocus="this.select();" onmouseup="return false;">
-    <button id="btpml" onclick="if(copyPermalink()) zoneurl.style.display = 'none';" style="margin:0px 10px;">copy</button>
-    <button onclick="zoneurl.style.display = 'none';" style="float:right;margin:0px 10px;">close</button>
+    <input type="text" id="permalink" onfocus="this.select();" onmouseup="return false;" readonly ><BR>
+    <button id="btpml" onclick="if(copyPermalink()) zoneurl.style.display = 'none';" style="margin:5px;">copy</button>
+    <button onclick="zoneurl.style.display = 'none';">close</button>
   </div>
 </div>
 
