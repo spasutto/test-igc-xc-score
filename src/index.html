@@ -59,6 +59,11 @@
         reader.readAsText(fileList[0]);
       });
       var scoreresult = document.getElementById('scoreresult');
+      addEventListener("error",function(e) {
+        if (typeof e === "object" && typeof e.message === "string") {
+          alert(e.message);
+        }
+      });
     </script>
   </body>
 </html>
