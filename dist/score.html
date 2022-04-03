@@ -395,7 +395,7 @@ function addPoint(lat, lng, pos) {
   });
   marker.on('mousedown', function(e) {if (e.originalEvent.which !== 3) window.pressTimer = window.setTimeout(function() { if (window.dragging) return;removePoint(e.sourceTarget);},1000);});
   marker.on('dragstart', function(e) {window.dragging = true;});
-  marker.on('dragend', function(e) {window.dragging = false;clearTimeout(window.pressTimer);drawLines();score();});
+  marker.on('dragend', function(e) {window.dragging = false;clearTimeout(window.pressTimer);updatePermalink();drawLines();score();});
   if (typeof pos == 'number') {
     pointlist.splice(pos, 0, marker);
   }else {
