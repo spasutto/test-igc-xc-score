@@ -455,6 +455,11 @@ function clearPath() {
   semipointlist = [];
   pointlist = [];
 }
+function quitFullscreen() {
+  if (map.isFullscreen()) {
+    map.toggleFullscreen();
+  }
+}
 window.addEventListener('DOMContentLoaded', ()=>{
   window.scoringrule = 'FFVL';
   window.pointlist = [];
@@ -525,7 +530,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       btn.title = "load an IGC file";
       //btn.innerHTML = "IGC";
       btn.innerHTML = '<svg viewBox="0 0 24 24" height="24" width="24" stroke="black" xmlns="http://www.w3.org/2000/svg"><text x="0" y="17" style="font-family:monospace;font-size:14;stroke-width:0;fill:#000;">IGC</text></svg>';
-      btn.onclick = function(e) {zoneurl.style.display = 'none';zoneigc.style.display = zoneigc.style.display !== 'initial' ? 'initial' : 'none';};
+      btn.onclick = function(e) {quitFullscreen();zoneurl.style.display = 'none';zoneigc.style.display = zoneigc.style.display !== 'initial' ? 'initial' : 'none';};
 
       return btn;
     },
@@ -541,7 +546,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       c.width=c.height="24";
       c.src = "data:image/png;base64,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";
       btn.appendChild(c);
-      btn.onclick = function(e) { zoneigc.style.display = 'none';zoneurl.style.display = zoneurl.style.display !== 'initial' ? 'initial' : 'none'; };
+      btn.onclick = function(e) {quitFullscreen();zoneigc.style.display = 'none';zoneurl.style.display = zoneurl.style.display !== 'initial' ? 'initial' : 'none'; };
 
       return btn;
     },
@@ -612,10 +617,10 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   //loadPointList('_p~iF~ps|U_ulLnnqC_mqNvxq`@');
   let pl = new URL(window.location.href).searchParams.get("pl");
-  if (typeof pl == 'string') {
-    loadPointList(decodeURIComponent(pl));
-  } else if (window.location.hash.substring(1).length > 0) {
+  if (window.location.hash.substring(1).length > 0) {
     loadPointList(decodeURIComponent(window.location.hash.substring(1)));
+  } else if (typeof pl == 'string') {
+    loadPointList(decodeURIComponent(pl));
   } else {
     try {
       navigator.geolocation.getCurrentPosition(pos => {pos = pos.coords;map.setView([pos.latitude, pos.longitude], 12);});
