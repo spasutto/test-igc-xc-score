@@ -8,7 +8,6 @@ let runningProcess;
 function loop(onsuccess, stopatfirsttry) {
   const s = this.next();
   if (!stopatfirsttry && !s.done) {
-    console.log(s);
     runningProcess = window.requestIdleCallback(loop.bind(this, onsuccess));
   } else {
     runningProcess = undefined;
@@ -33,7 +32,7 @@ export function score(igccont, onsuccess, scoringrule, stopatfirsttry) {
 
   window.requestIdleCallback(() => {
     let it = solver(flight, scoringRules[scoringrule], {
-      maxcycle: 1000,
+      maxcycle: 100,
       trim: true
     });
     loop.call(it, onsuccess, stopatfirsttry);
