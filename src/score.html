@@ -192,7 +192,7 @@ function loadPointList(data) {
     addPoint(pts[i][0], pts[i][1]);
   }
   map.fitBounds(new L.featureGroup(pointlist).getBounds(), {padding: [35,35]});
-  permalink.value=getPermalink();
+  updatePermalink();
   drawLines();
   score();
 }
@@ -200,7 +200,11 @@ function getFromPointList() {
  return encodeURIComponent(encode(pointlist.map(pt => [pt.getLatLng().lat, pt.getLatLng().lng])));
 }
 function getPermalink() {
-  return location.protocol + '//' + location.host + location.pathname + '?pl=' + getFromPointList();
+  return location.protocol + '//' + location.host + location.pathname + '#' + getFromPointList();
+}
+function updatePermalink() {
+  window.location.hash = '#' + getFromPointList();
+  permalink.value=getPermalink();
 }
 function copyPermalink() {
   navigator.clipboard.writeText(permalink.value).then(function() {
@@ -357,7 +361,7 @@ function removePoint(marker) {
       break;
     }
   }
-  permalink.value=getPermalink();
+  updatePermalink();
   drawLines();
   score();
 }
@@ -371,7 +375,7 @@ function splitPoint(marker) {
       break;
     }
   }
-  permalink.value=getPermalink();
+  updatePermalink();
   drawLines();
   score();
 }
@@ -548,7 +552,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   map.on('click', function(e) {
   if (e.originalEvent.srcElement != document.getElementById('map')) return;
     addPoint(e.latlng.lat, e.latlng.lng);
-    permalink.value=getPermalink();
+    updatePermalink();
     drawLines();
     score();
   });
@@ -583,7 +587,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       try {
         zoneigc.style.display = 'none';
         clearPath();
-        permalink.value=getPermalink();
+        updatePermalink();
         igccontent = reader.result;
         window.needclear = true;
         score((score) => {
@@ -609,7 +613,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   //loadPointList('_p~iF~ps|U_ulLnnqC_mqNvxq`@');
   let pl = new URL(window.location.href).searchParams.get("pl");
   if (typeof pl == 'string') {
-    loadPointList(pl);
+    loadPointList(decodeURIComponent(pl));
+  } else if (window.location.hash.substring(1).length > 0) {
+    loadPointList(decodeURIComponent(window.location.hash.substring(1)));
   } else {
     try {
       navigator.geolocation.getCurrentPosition(pos => {pos = pos.coords;map.setView([pos.latitude, pos.longitude], 12);});
