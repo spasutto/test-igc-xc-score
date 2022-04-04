@@ -268,37 +268,37 @@ function displayFlightScore() {
   scoredist.innerHTML += toReadableHour(d*120)+"&nbsp;@&nbsp;30km/h<BR>";
   scoredist.innerHTML += toReadableHour(d*90)+"&nbsp;@&nbsp;40km/h<BR>";
   if (Array.isArray(flightscore.scoreInfo.tp)) {
-  let tps = flightscore.scoreInfo.tp;
-  if (flightscore.scoreInfo.cp) {
-    let tmpmarker = L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x], {icon: startIcon});
-    tmpmarker.addTo(map).bindPopup("start");
-    scorepointlist.push(tmpmarker);
-  } else if (flightscore.scoreInfo.ep) {
-    let tmpmarker = L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x], {icon: startIcon});
-    tmpmarker.addTo(map).bindPopup("start");
-    scorepointlist.push(tmpmarker);
-  }
-  for (let i=0; i<tps.length; i++) {
-    let markertp = L.marker([tps[i].y, tps[i].x], {icon: turnpointIcon});
-    markertp.addTo(map).bindPopup("TP#"+(i+1));
-    scorepointlist.push(markertp);
-  }
-  if (flightscore.scoreInfo.cp) {
-    let tmpmarker = L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x], {icon: finishIcon});
-    tmpmarker.addTo(map).bindPopup("finish");
-    scorepointlist.push(tmpmarker);
-  } else if (flightscore.scoreInfo.ep) {
-    let tmpmarker = L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x], {icon: finishIcon});
-    tmpmarker.addTo(map).bindPopup("finish");
-    scorepointlist.push(tmpmarker);
-  }
-  scorelinepath = new L.Polyline(scorepointlist.map(pt => pt.getLatLng()), {
-    color: 'red',
-    weight: 3,
-    opacity: 0.5,
-    smoothFactor: 1
-  });
-  scorelinepath.addTo(map);
+    let tps = flightscore.scoreInfo.tp;
+    if (flightscore.scoreInfo.cp) {
+      let tmpmarker = L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x], {icon: startIcon});
+      tmpmarker.addTo(map).bindPopup("start");
+      scorepointlist.push(tmpmarker);
+    } else if (flightscore.scoreInfo.ep) {
+      let tmpmarker = L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x], {icon: startIcon});
+      tmpmarker.addTo(map).bindPopup("start");
+      scorepointlist.push(tmpmarker);
+    }
+    for (let i=0; i<tps.length; i++) {
+      let markertp = L.marker([tps[i].y, tps[i].x], {icon: turnpointIcon});
+      markertp.addTo(map).bindPopup("TP#"+(i+1));
+      scorepointlist.push(markertp);
+    }
+    if (flightscore.scoreInfo.cp) {
+      let tmpmarker = L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x], {icon: finishIcon});
+      tmpmarker.addTo(map).bindPopup("finish");
+      scorepointlist.push(tmpmarker);
+    } else if (flightscore.scoreInfo.ep) {
+      let tmpmarker = L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x], {icon: finishIcon});
+      tmpmarker.addTo(map).bindPopup("finish");
+      scorepointlist.push(tmpmarker);
+    }
+    scorelinepath = new L.Polyline(scorepointlist.map(pt => pt.getLatLng()), {
+      color: 'red',
+      weight: 3,
+      opacity: 0.5,
+      smoothFactor: 1
+    });
+    scorelinepath.addTo(map);
   }
 }
 function score(onsuccess) {
@@ -393,7 +393,7 @@ function addPoint(lat, lng, pos) {
       clearTimeout(window.pressTimer);
     }
   });
-  marker.on('mousedown', function(e) {if (e.originalEvent.which !== 3) window.pressTimer = window.setTimeout(function() { if (window.dragging) return;removePoint(e.sourceTarget);},1000);});
+  marker.on('contextmenu', function(e) {if (e.originalEvent.which !== 3) window.pressTimer = window.setTimeout(function() { if (window.dragging) return;removePoint(e.sourceTarget);},1000);});
   marker.on('dragstart', function(e) {window.dragging = true;});
   marker.on('dragend', function(e) {window.dragging = false;clearTimeout(window.pressTimer);updatePermalink();drawLines();score();});
   if (typeof pos == 'number') {
@@ -562,6 +562,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     score();
   });
   map.on('contextmenu', function(e) {e.originalEvent.preventDefault();});
+  document.getElementById('map').addEventListener('touchend', function(e) {clearTimeout(window.pressTimer);});
   var LeafIcon = L.Icon.extend({
     options: {
       iconSize:   [15, 25],
