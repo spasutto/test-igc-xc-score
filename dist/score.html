@@ -184,14 +184,14 @@ function decode(encodedPath, precision = 5) {
 
   return path;
 }
-function loadPointList(data) {
+function loadPointList(data, nofit) {
   clearPath();
   let pts = decode(data);
   if (pts.length <= 0) return;
   for (let i=0; i<pts.length; i++) {
     addPoint(pts[i][0], pts[i][1]);
   }
-  map.fitBounds(new L.featureGroup(pointlist).getBounds(), {padding: [35,35]});
+  if (!nofit) map.fitBounds(new L.featureGroup(pointlist).getBounds(), {padding: [35,35]});
   updatePermalink();
   drawLines();
   score();
@@ -607,6 +607,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
       }
     });
     reader.readAsText(fileList[0]);
+  });
+  window.addEventListener('hashchange', function (event) {
+    loadPointList(decodeURIComponent(window.location.hash.substring(1)), true);
   });
 
   if (location.protocol.toLowerCase() !== 'https:') {

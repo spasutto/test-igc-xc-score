@@ -17,7 +17,7 @@ window.onload = function () {
 Live demo running on [Github page](https://spasutto.github.io/test-igc-xc-score/dist/).
 There is also a simple [map point&click score tool](https://spasutto.github.io/test-igc-xc-score/dist/score.html)
 
-Alternatively you can get a [release zip](https://github.com/spasutto/test-igc-xc-score/releases/) (e.g. [test-igc-xc-score_v1.1.4.zip](https://github.com/spasutto/test-igc-xc-score/releases/download/v1.1.4/test-igc-xc-score_v1.1.4.zip)) and open `index.html` or `score.html` in webserver, select an IGC file to "score".
+Alternatively you can get a [release zip](https://github.com/spasutto/test-igc-xc-score/releases/) (e.g. [test-igc-xc-score_v1.1.5.zip](https://github.com/spasutto/test-igc-xc-score/releases/download/v1.1.5/test-igc-xc-score_v1.1.5.zip)) and open `index.html` or `score.html` in webserver, select an IGC file to "score".
 
 ## Build
 ```
