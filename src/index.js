@@ -32,7 +32,7 @@ export function score(igccont, onsuccess, scoringrule, stopatfirsttry) {
 
   window.requestIdleCallback(() => {
     let it = solver(flight, scoringRules[scoringrule], {
-      maxcycle: 100,
+      maxcycle: 1000,
       trim: true
     });
     loop.call(it, onsuccess, stopatfirsttry);

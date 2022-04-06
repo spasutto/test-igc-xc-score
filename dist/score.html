@@ -184,15 +184,15 @@ function decode(encodedPath, precision = 5) {
 
   return path;
 }
-function loadPointList(data, nofit) {
+function loadPointList(data, hashchanging) {
   clearPath();
   let pts = decode(data);
   if (pts.length <= 0) return;
   for (let i=0; i<pts.length; i++) {
     addPoint(pts[i][0], pts[i][1]);
   }
-  if (!nofit) map.fitBounds(new L.featureGroup(pointlist).getBounds(), {padding: [35,35]});
-  updatePermalink();
+  if (!hashchanging) map.fitBounds(new L.featureGroup(pointlist).getBounds(), {padding: [35,35]});
+  if (!hashchanging) updatePermalink();
   drawLines();
   score();
 }
@@ -230,9 +230,57 @@ function toHour(seconds) {
 function toReadableHour(seconds) {
   return toHour(seconds).slice(0, -3).replace(/:/g, 'h');
 }
+function isClockwise(pixels) {
+  return ((pixels[1].y - pixels[0].y) * (pixels[2].x - pixels[0].x) - (pixels[2].y - pixels[0].y) * (pixels[1].x - pixels[0].x)) < 0;
+}
+function faiSector(pixels) {
+	var flip = isClockwise(pixels) ? 1 : -1;
+	var delta = {'x':pixels[1].x - pixels[0].x, 'y':pixels[1].y - pixels[0].y};
+	var theta = flip * Math.atan2(delta.y, delta.x);
+	var cos_theta = Math.cos(theta);
+	var sin_theta = Math.sin(theta);
+	var a, b, x, y;
+	var c = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
+	var result = [];
+	for (ap = 28; ap < 44; ++ap) {
+		a = c * ap / 28.0;
+		b = c * (72.0 - ap) / 28.0;
+		x = (b * b + c * c - a * a) / (2 * c);
+		y = Math.sqrt(b * b - x * x);
+		result.push({'x':pixels[0].x + x * cos_theta - y * sin_theta, 'y':pixels[0].y + flip * (x * sin_theta + y * cos_theta)});
+	}
+	for (cp = 28; cp < 44; ++cp) {
+		a = c * (72.0 - cp) / cp;
+		b = c * 28.0 / cp;
+		x = (b * b + c * c - a * a) / (2 * c);
+		y = Math.sqrt(b * b - x * x);
+		result.push({'x':pixels[0].x + x * cos_theta - y * sin_theta, 'y':pixels[0].y + flip * (x * sin_theta + y * cos_theta)});
+	}
+	for (cp = 44; cp >= 28; --cp) {
+		a = c * 28.0 / cp;
+		b = c * (72.0 - cp) / cp;
+		x = (b * b + c * c - a * a) / (2 * c);
+		y = Math.sqrt(b * b - x * x);
+		result.push({'x':pixels[0].x + x * cos_theta - y * sin_theta, 'y':pixels[0].y + flip * (x * sin_theta + y * cos_theta)});
+	}
+	return result.map(function(pixel) { return map.containerPointToLatLng(pixel); });
+}
+function drawFAISectors(faiSectors) {
+  if ((faiSectors[0].x == faiSectors[1].x && faiSectors[0].y == faiSectors[1].y) ||
+      (faiSectors[1].x == faiSectors[2].x && faiSectors[1].y == faiSectors[2].y) ||
+      (faiSectors[0].x == faiSectors[2].x && faiSectors[0].y == faiSectors[2].y)) return;
+  faisectpath = [];
+  faisectpath.push(new L.Polyline(faiSector([faiSectors[0], faiSectors[1], faiSectors[2]]), {...opt_path, color: 'green', fill : 'green'}));
+  faisectpath.push(new L.Polyline(faiSector([faiSectors[1], faiSectors[2], faiSectors[0]]), {...opt_path, color: 'blue', fill : 'blue'}));
+  faisectpath.push(new L.Polyline(faiSector([faiSectors[2], faiSectors[0], faiSectors[1]]), {...opt_path, color: 'red', fill : 'red'}));
+  faisectpath.forEach(sectpath => sectpath.addTo(map));
+}
 function displayFlightScore() {
   if (scorelinepath) {
     map.removeLayer(scorelinepath);
+  }
+  if (faisectpath) {
+    faisectpath.forEach(sectpath => map.removeLayer(sectpath));
   }
   if (scorepointlist) {
     for (let i=0; i<scorepointlist.length; i++){
@@ -245,7 +293,12 @@ function displayFlightScore() {
     return;
   }
   zonescore.style.display = 'initial';
-  scoreres.innerHTML = "<b>"+flightscore.opt.scoring.name+"</b><BR>"+flightscore.score+" pts / "+flightscore.scoreInfo.distance+" km";
+  let typeparcours = flightscore.opt.scoring.code;
+  let scoreparcours = flightscore.score;
+  let distparcours = flightscore.scoreInfo.distance;
+  scoreparcours = scoreparcours < 100 ? Math.round(scoreparcours*100)/100 : Math.round(scoreparcours);
+  distparcours = distparcours < 100 ? Math.round(distparcours*100)/100 : Math.round(distparcours);
+  scoreres.innerHTML = "<b>"+flightscore.opt.scoring.name+"</b><BR>"+scoreparcours+" pts / "+distparcours+" km";
   let d = 0;
   if (!gpx_track) {
     for (let i=1; i<pointlist.length; i++) {
@@ -267,6 +320,7 @@ function displayFlightScore() {
   scoredist.innerHTML += toReadableHour(d*144)+"&nbsp;@&nbsp;25km/h<BR>";
   scoredist.innerHTML += toReadableHour(d*120)+"&nbsp;@&nbsp;30km/h<BR>";
   scoredist.innerHTML += toReadableHour(d*90)+"&nbsp;@&nbsp;40km/h<BR>";
+  let faiSectors = [];
   if (Array.isArray(flightscore.scoreInfo.tp)) {
     let tps = flightscore.scoreInfo.tp;
     if (flightscore.scoreInfo.cp) {
@@ -282,6 +336,7 @@ function displayFlightScore() {
       let markertp = L.marker([tps[i].y, tps[i].x], {icon: turnpointIcon});
       markertp.addTo(map).bindPopup("TP#"+(i+1));
       scorepointlist.push(markertp);
+      faiSectors.push(map.latLngToContainerPoint(L.latLng(tps[i].y, tps[i].x)));
     }
     if (flightscore.scoreInfo.cp) {
       let tmpmarker = L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x], {icon: finishIcon});
@@ -299,6 +354,9 @@ function displayFlightScore() {
       smoothFactor: 1
     });
     scorelinepath.addTo(map);
+  }
+  if (faiSectors.length == 3 && (typeparcours == 'tri' || typeparcours == 'fai')) {
+    drawFAISectors(faiSectors);
   }
 }
 function score(onsuccess) {
@@ -325,7 +383,6 @@ function score(onsuccess) {
         b_rec += String(lng.mindec).padStart(3, '0');
         b_rec += lng.dir;
         b_rec += "A000000160845";
-        //console.log(String(lat.deg).padStart(2, '0')+'°'+String(lat.min).padStart(2, '0')+'.'+String(lat.mindec).padStart(3, '0')+'\''+lat.dir+', '+String(lng.deg).padStart(2, '0')+'°'+String(lng.min).padStart(2, '0')+'.'+String(lng.mindec).padStart(3, '0')+'\''+lng.dir);
         return b_rec;
       }
       if (pointlist.length<5) {
@@ -362,8 +419,6 @@ function removePoint(marker) {
     }
   }
   updatePermalink();
-  drawLines();
-  score();
 }
 function splitPoint(marker) {
   let pos = marker.getLatLng();
@@ -376,8 +431,6 @@ function splitPoint(marker) {
     }
   }
   updatePermalink();
-  drawLines();
-  score();
 }
 function addPoint(lat, lng, pos) {
   if (gpx_track) return;
@@ -395,7 +448,7 @@ function addPoint(lat, lng, pos) {
   });
   marker.on('contextmenu', function(e) {if (e.originalEvent.which !== 3) window.pressTimer = window.setTimeout(function() { if (window.dragging) return;removePoint(e.sourceTarget);},1000);});
   marker.on('dragstart', function(e) {window.dragging = true;});
-  marker.on('dragend', function(e) {window.dragging = false;clearTimeout(window.pressTimer);updatePermalink();drawLines();score();});
+  marker.on('dragend', function(e) {window.dragging = false;clearTimeout(window.pressTimer);updatePermalink();});
   if (typeof pos == 'number') {
     pointlist.splice(pos, 0, marker);
   }else {
@@ -440,6 +493,9 @@ function clearPath() {
   if (scorelinepath) {
     map.removeLayer(scorelinepath);
   }
+  if (faisectpath) {
+    faisectpath.forEach(sectpath => map.removeLayer(sectpath));
+  }
   if (scorepointlist) {
     for (let i=0; i<scorepointlist.length; i++){
       map.removeLayer(scorepointlist[i]);
@@ -467,6 +523,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   window.scorepointlist = [];
   window.linepath = null;
   window.scorelinepath = null;
+  window.faisectpath = [];
   window.map = L.map('map');
   var opentopomap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
   maxZoom: 17,
@@ -555,11 +612,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   new L.Control.URLPop({ position: 'topright' }).addTo(map);
 
   map.on('click', function(e) {
-  if (e.originalEvent.srcElement != document.getElementById('map')) return;
+    if (e.originalEvent.srcElement != document.getElementById('map')) return;
     addPoint(e.latlng.lat, e.latlng.lng);
     updatePermalink();
-    drawLines();
-    score();
   });
   map.on('contextmenu', function(e) {e.originalEvent.preventDefault();});
   document.getElementById('map').addEventListener('touchend', function(e) {clearTimeout(window.pressTimer);});
@@ -596,17 +651,21 @@ window.addEventListener('DOMContentLoaded', ()=>{
         updatePermalink();
         igccontent = reader.result;
         window.needclear = true;
-        score((score) => {
-          gpx_track = new L.Polyline(score.opt.flight.flightPoints.map(p => new L.LatLng(p.y, p.x)), opt_path);
-          gpx_track.addTo(map);
-          map.fitBounds(gpx_track.getBounds(), {padding: [35,35]});
-          window.needclear = false;
-        });
+        //window.setTimeout(function() {
+          score((score) => {
+            gpx_track = new L.Polyline(score.opt.flight.flightPoints.map(p => new L.LatLng(p.y, p.x)), opt_path);
+            gpx_track.addTo(map);
+            map.fitBounds(gpx_track.getBounds(), {padding: [35,35]});
+            window.needclear = false;
+          });
+        //}, 200);
       } catch(e) {
         console.log(e);
       }
     });
-    reader.readAsText(fileList[0]);
+    try {
+      reader.readAsText(fileList[0]);
+    } catch(e) {}
   });
   window.addEventListener('hashchange', function (event) {
     loadPointList(decodeURIComponent(window.location.hash.substring(1)), true);
