@@ -234,36 +234,36 @@ function isClockwise(pixels) {
   return ((pixels[1].y - pixels[0].y) * (pixels[2].x - pixels[0].x) - (pixels[2].y - pixels[0].y) * (pixels[1].x - pixels[0].x)) < 0;
 }
 function faiSector(pixels) {
-	var flip = isClockwise(pixels) ? 1 : -1;
-	var delta = {'x':pixels[1].x - pixels[0].x, 'y':pixels[1].y - pixels[0].y};
-	var theta = flip * Math.atan2(delta.y, delta.x);
-	var cos_theta = Math.cos(theta);
-	var sin_theta = Math.sin(theta);
-	var a, b, x, y;
-	var c = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
-	var result = [];
-	for (ap = 28; ap < 44; ++ap) {
-		a = c * ap / 28.0;
-		b = c * (72.0 - ap) / 28.0;
-		x = (b * b + c * c - a * a) / (2 * c);
-		y = Math.sqrt(b * b - x * x);
-		result.push({'x':pixels[0].x + x * cos_theta - y * sin_theta, 'y':pixels[0].y + flip * (x * sin_theta + y * cos_theta)});
-	}
-	for (cp = 28; cp < 44; ++cp) {
-		a = c * (72.0 - cp) / cp;
-		b = c * 28.0 / cp;
-		x = (b * b + c * c - a * a) / (2 * c);
-		y = Math.sqrt(b * b - x * x);
-		result.push({'x':pixels[0].x + x * cos_theta - y * sin_theta, 'y':pixels[0].y + flip * (x * sin_theta + y * cos_theta)});
-	}
-	for (cp = 44; cp >= 28; --cp) {
-		a = c * 28.0 / cp;
-		b = c * (72.0 - cp) / cp;
-		x = (b * b + c * c - a * a) / (2 * c);
-		y = Math.sqrt(b * b - x * x);
-		result.push({'x':pixels[0].x + x * cos_theta - y * sin_theta, 'y':pixels[0].y + flip * (x * sin_theta + y * cos_theta)});
-	}
-	return result.map(function(pixel) { return map.containerPointToLatLng(pixel); });
+  let flip = isClockwise(pixels) ? 1 : -1;
+  let delta = {'x':pixels[1].x - pixels[0].x, 'y':pixels[1].y - pixels[0].y};
+  let theta = flip * Math.atan2(delta.y, delta.x);
+  let cos_theta = Math.cos(theta);
+  let sin_theta = Math.sin(theta);
+  let a, b, x, y;
+  let c = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
+  let result = [];
+  for (ap = 28; ap < 44; ++ap) {
+    a = c * ap / 28.0;
+    b = c * (72.0 - ap) / 28.0;
+    x = (b * b + c * c - a * a) / (2 * c);
+    y = Math.sqrt(b * b - x * x);
+    result.push({'x':pixels[0].x + x * cos_theta - y * sin_theta, 'y':pixels[0].y + flip * (x * sin_theta + y * cos_theta)});
+  }
+  for (cp = 28; cp < 44; ++cp) {
+    a = c * (72.0 - cp) / cp;
+    b = c * 28.0 / cp;
+    x = (b * b + c * c - a * a) / (2 * c);
+    y = Math.sqrt(b * b - x * x);
+    result.push({'x':pixels[0].x + x * cos_theta - y * sin_theta, 'y':pixels[0].y + flip * (x * sin_theta + y * cos_theta)});
+  }
+  for (cp = 44; cp >= 28; --cp) {
+    a = c * 28.0 / cp;
+    b = c * (72.0 - cp) / cp;
+    x = (b * b + c * c - a * a) / (2 * c);
+    y = Math.sqrt(b * b - x * x);
+    result.push({'x':pixels[0].x + x * cos_theta - y * sin_theta, 'y':pixels[0].y + flip * (x * sin_theta + y * cos_theta)});
+  }
+  return result.map(function(pixel) { return map.containerPointToLatLng(pixel); });
 }
 function drawFAISectors(faiSectors) {
   if ((faiSectors[0].x == faiSectors[1].x && faiSectors[0].y == faiSectors[1].y) ||
@@ -525,10 +525,19 @@ window.addEventListener('DOMContentLoaded', ()=>{
   window.scorelinepath = null;
   window.faisectpath = [];
   window.map = L.map('map');
-  var opentopomap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  let opentopomap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
   maxZoom: 17,
   attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
   }).addTo(map);
+
+  let esrisat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+  }).addTo(map);
+  let baseMaps = {};
+  baseMaps["Satellite"] = esrisat;
+  baseMaps["Topo"] = opentopomap;
+  L.control.layers(baseMaps).addTo(map);
+  
   map.addControl(new L.Control.Fullscreen());
   // TODO bouton permettant de sauvegarder ou de charger l'igc
   L.Control.ScoreRes = L.Control.extend({
