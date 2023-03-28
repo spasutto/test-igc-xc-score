@@ -323,11 +323,11 @@ function displayFlightScore() {
   }
   d /= 1000;
   scoredist.innerHTML = Math.round(d) +" km total<BR>"
-  scoredist.innerHTML += toReadableHour(d*360)+"&nbsp;@&nbsp;10km/h<BR>";
-  scoredist.innerHTML += toReadableHour(d*180)+"&nbsp;@&nbsp;20km/h<BR>";
-  scoredist.innerHTML += toReadableHour(d*144)+"&nbsp;@&nbsp;25km/h<BR>";
-  scoredist.innerHTML += toReadableHour(d*120)+"&nbsp;@&nbsp;30km/h<BR>";
-  scoredist.innerHTML += toReadableHour(d*90)+"&nbsp;@&nbsp;40km/h<BR>";
+  scoredist.innerHTML += toReadableHour(distparcours*360)+"&nbsp;@&nbsp;10km/h<BR>";
+  scoredist.innerHTML += toReadableHour(distparcours*180)+"&nbsp;@&nbsp;20km/h<BR>";
+  scoredist.innerHTML += toReadableHour(distparcours*144)+"&nbsp;@&nbsp;25km/h<BR>";
+  scoredist.innerHTML += toReadableHour(distparcours*120)+"&nbsp;@&nbsp;30km/h<BR>";
+  scoredist.innerHTML += toReadableHour(distparcours*90)+"&nbsp;@&nbsp;40km/h<BR>";
   faiSectors = [];
   if (Array.isArray(flightscore.scoreInfo.tp)) {
     let tps = flightscore.scoreInfo.tp;
@@ -413,7 +413,7 @@ function score(onsuccess) {
       if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
       window.flightscore = score;
       displayFlightScore();
-    }, window.scoringrule);
+    }, window.scoringrule, 10);
   } catch(e) {console.log(e);}
 }
 function removePoint(marker) {

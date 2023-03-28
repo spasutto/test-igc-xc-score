@@ -4,10 +4,11 @@ import { solver, scoringRules } from 'igc-xc-score';
 
 
 let runningProcess;
+let tend = null;
 
-function loop(onsuccess, stopatfirsttry) {
+function loop(onsuccess) {
   const s = this.next();
-  if (!stopatfirsttry && !s.done) {
+  if (!s.done && Date.now() < tend) {
     runningProcess = window.requestIdleCallback(loop.bind(this, onsuccess));
   } else {
     runningProcess = undefined;
@@ -15,12 +16,11 @@ function loop(onsuccess, stopatfirsttry) {
   }
 }
 
-export function score(igccont, onsuccess, scoringrule, stopatfirsttry) {
+export function score(igccont, onsuccess, scoringrule, maxtime) {
   if (typeof onsuccess !== 'function') {
     return;
   }
-  stopatfirsttry = stopatfirsttry === true;
-  if (!scoringRules.hasOwnProperty(scoringrule)) {
+  if (scoringRules && !scoringRules.hasOwnProperty(scoringrule)) {
     scoringrule = 'FFVL';//Object.keys(scoringRules)[0];
   }
   if (runningProcess) {
@@ -31,10 +31,11 @@ export function score(igccont, onsuccess, scoringrule, stopatfirsttry) {
   const flight = IGCParser.parse(igccont, { lenient: true });
 
   window.requestIdleCallback(() => {
-    let it = solver(flight, scoringRules[scoringrule], {
-      maxcycle: 1000,
-      trim: true
-    });
-    loop.call(it, onsuccess, stopatfirsttry);
+    let it = solver(flight, scoringRules[scoringrule], {maxcycle: 1000});
+	if (typeof maxtime !== 'number') {
+	  maxtime = 10;
+	}
+	tend = Date.now() + maxtime * 1e3;
+    loop.call(it, onsuccess);
   });
 }
