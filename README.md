@@ -21,13 +21,13 @@ Alternatively you can get a [release zip](https://github.com/spasutto/test-igc-x
 
 ## Options
 `IGCScore.score` accepts 4 parameters :
- - the igc content (plain text format)
- - the callback function (taking a [score result object](#return-data) as parameter)
- - _[optional]_ the scoring rules : a string like `'FFVL'` or `'XContest'`. Values are available by calling :
+ - igc content (plain text format)
+ - callback function (taking a [score result object](#return-data) as parameter)
+ - _[optional]_ scoring rules : a string like `'FFVL'` or `'XContest'`. Values are available by calling :
 ```javascript
 Object.keys(IGCScore.xcScoringRules); // sample output : ['FFVL', 'XContest', 'FAI', 'FAI-Cylinders', 'FAI-OAR', 'FAI-OAR2', 'XCLeague']
 ```
- - _[optional]_ the maximum time to compute the score (in seconds, default to 10s, if greater then further computations will be discarded and actual score will be returned).
+ - _[optional]_ maximum time to compute the score (in seconds, default to 10s, if greater then further computations will be discarded and actual score will be returned).
 
 ## Build
 ```
