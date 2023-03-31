@@ -87,6 +87,7 @@
   </style>
 
 <script>
+const R = 6371000;
 let gpx_track = null;
 let igccontent = null;
 let opt_path = {
@@ -286,6 +287,40 @@ function drawFAISectors() {
   faisectpath.push(new L.Polyline(faiSector([pixels[2], pixels[0], pixels[1]]), {...opt_path, color: 'red', fill : 'red'}));
   faisectpath.forEach(sectpath => sectpath.addTo(map));
 }
+function toRad(lat) {
+  return lat*(Math.PI/180);
+}
+function toDeg(lat) {
+  return lat*(180/Math.PI);
+}
+function coord_at(center, theta, d) {
+  let lat = Math.asin(Math.sin(center[0]) * Math.cos(d / R) + Math.cos(center[0]) * Math.sin(d / R) * Math.cos(theta));
+  let lon = center[1] + Math.atan2(Math.sin(theta) * Math.sin(d / R) * Math.cos(center[0]), Math.cos(d / R) - Math.sin(center[0]) * Math.sin(center[0]));
+  return [lat, lon];
+}
+function calccircle(center, radius) {
+  center = center.map(p => toRad(p));
+  let error = 0.1;
+  let decimation = Math.ceil(Math.PI / Math.acos((radius - error) / (radius + error)));
+  let coords = [];
+  for (let i = 0; i < decimation + 1; i++) {
+    let coord = coord_at(center, -2 * Math.PI * i / decimation, radius + error);
+    coords.push(coord.map(p => toDeg(p)));
+  }
+  return coords;
+}
+function tryDrawStartCylinder(center) {
+  if (closingcirclepath) {
+    map.removeLayer(closingcirclepath);
+  }
+  try {
+    let rules = IGCScore.xcScoringRules[window.scoringrule].find(sr => sr.name == flightscore.opt.scoring.name);
+    let radius = rules.closingDistance(flightscore.scoreInfo.distance, {'scoring':rules}) * 1000;
+    let circle = calccircle(center, radius);
+    closingcirclepath = new L.Polyline(circle, {...opt_path, color: 'yellow', fill : 'yellow'});
+    closingcirclepath.addTo(map);
+  } catch {}
+}
 function displayFlightScore() {
   if (scorelinepath) {
     map.removeLayer(scorelinepath);
@@ -297,7 +332,8 @@ function displayFlightScore() {
     scorepointlist = [];
   }
   if (typeof flightscore.scoreInfo != 'object' || flightscore.scoreInfo.distance < 1) {
-    zonescore.style.display = 'none';
+    //zonescore.style.display = 'none';
+    scoreres.innerHTML = "no score.";
     return;
   }
   zonescore.style.display = 'initial';
@@ -335,6 +371,7 @@ function displayFlightScore() {
       let tmpmarker = L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x], {icon: startIcon});
       tmpmarker.addTo(map).bindPopup("start");
       scorepointlist.push(tmpmarker);
+      tryDrawStartCylinder([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x]);
     } else if (flightscore.scoreInfo.ep) {
       let tmpmarker = L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x], {icon: startIcon});
       tmpmarker.addTo(map).bindPopup("start");
@@ -502,6 +539,9 @@ function clearPath() {
   if (faisectpath) {
     faisectpath.forEach(sectpath => map.removeLayer(sectpath));
   }
+  if (closingcirclepath) {
+    map.removeLayer(closingcirclepath);
+  }
   if (scorepointlist) {
     for (let i=0; i<scorepointlist.length; i++){
       map.removeLayer(scorepointlist[i]);
@@ -531,6 +571,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   window.scorelinepath = null;
   window.faisectpath = [];
   window.faiSectors = [];
+  window.closingcirclepath = null;
   window.typeparcours = null;
   window.map = L.map('map');
   let opentopomap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
@@ -561,14 +602,12 @@ window.addEventListener('DOMContentLoaded', ()=>{
       c = L.DomUtil.create('div');
       let d = L.DomUtil.create('select');
       d.onchange = function() {window.scoringrule = this.value;score();};
-      let e = L.DomUtil.create('option');
-      e.value = 'FFVL';
-      e.innerText = 'FFVL';
-      d.appendChild(e);
-      e = L.DomUtil.create('option');
-      e.value = 'XContest';
-      e.innerText = 'XContest';
-      d.appendChild(e);
+      for (let rule in IGCScore.xcScoringRules) {
+        let e = L.DomUtil.create('option');
+        e.value = rule;
+        e.innerText = rule;
+        d.appendChild(e);
+      }
       c.appendChild(d);
       zonescore.appendChild(c);
       zonescore.appendChild(L.DomUtil.create('HR'));

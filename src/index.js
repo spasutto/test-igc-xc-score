@@ -16,6 +16,8 @@ function loop(onsuccess) {
   }
 }
 
+export const xcScoringRules = scoringRules;
+
 export function score(igccont, onsuccess, scoringrule, maxtime) {
   if (typeof onsuccess !== 'function') {
     return;
