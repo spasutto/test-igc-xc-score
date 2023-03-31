@@ -19,6 +19,16 @@ There is also a simple [map point&click score tool](https://spasutto.github.io/t
 
 Alternatively you can get a [release zip](https://github.com/spasutto/test-igc-xc-score/releases/) (e.g. [test-igc-xc-score_v1.1.5.zip](https://github.com/spasutto/test-igc-xc-score/releases/download/v1.1.5/test-igc-xc-score_v1.1.5.zip)) and open `index.html` or `score.html` in webserver, select an IGC file to "score".
 
+## Options
+`IGCScore.score` accepts 4 parameters :
+ - the igc content (plain text format)
+ - the callback function (taking a [score result object](#return-data) as parameter)
+ - _[optional]_ the scoring rules : a string like `'FFVL'` or `'XContest'`. Values are available by calling :
+```javascript
+Object.keys(IGCScore.xcScoringRules); // sample output : ['FFVL', 'XContest', 'FAI', 'FAI-Cylinders', 'FAI-OAR', 'FAI-OAR2', 'XCLeague']
+```
+ - _[optional]_ the maximum time to compute the score (in seconds, default to 10s, if greater then further computations will be discarded and actual score will be returned).
+
 ## Build
 ```
 npm install
