@@ -126,3 +126,7 @@ igc-xc-score return (minus opt.flight) :
     "optimal": true
 }
 ```
+
+## Credits
+ - [igc-xc-score](https://github.com/mmomtchev/igc-xc-score/) by mmomtchev
+ - FAI Sectors by Tom Payne (stolen from XC Planner)
