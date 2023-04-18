@@ -314,8 +314,14 @@ function tryDrawStartCylinder(center) {
     map.removeLayer(closingcirclepath);
   }
   try {
-    let rules = IGCScore.xcScoringRules[window.scoringrule].find(sr => sr.name == flightscore.opt.scoring.name);
-    let radius = rules.closingDistance(flightscore.scoreInfo.distance, {'scoring':rules}) * 1000;
+    let rule = IGCScore.xcScoringRules[window.scoringrule].find(sr => sr.name == flightscore.opt.scoring.name);
+    if (typeof rule.closingDistance !== 'function') {
+      // on essaie de trouver la règle fermante qui propose le plus grand rayon
+      let rules = IGCScore.xcScoringRules[window.scoringrule].filter(r => typeof r.closingDistance === 'function').sort((a,b) => b.closingDistance(flightscore.scoreInfo.distance, {'scoring':b})-a.closingDistance(flightscore.scoreInfo.distance, {'scoring':a}));
+      if (rules.length <= 0) return;
+      rule = rules[0];
+    }
+    let radius = rule.closingDistance(flightscore.scoreInfo.distance, {'scoring':rule}) * 1000;
     let circle = calccircle(center, radius);
     closingcirclepath = new L.Polyline(circle, {...opt_path, color: 'yellow', fill : 'yellow'});
     closingcirclepath.addTo(map);
@@ -376,6 +382,7 @@ function displayFlightScore() {
       let tmpmarker = L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x], {icon: startIcon});
       tmpmarker.addTo(map).bindPopup("start");
       scorepointlist.push(tmpmarker);
+      tryDrawStartCylinder([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x]);
     }
     for (let i=0; i<tps.length; i++) {
       let markertp = L.marker([tps[i].y, tps[i].x], {icon: turnpointIcon});
